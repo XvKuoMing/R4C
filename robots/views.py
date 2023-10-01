@@ -57,7 +57,7 @@ class RobotsJsonResponse:
 @method_decorator(csrf_exempt, name='dispatch')
 class RobotsList(RobotsJsonResponse, View):
     model = Robot
-    http_method_names = ['get', 'post', 'delete']
+    http_method_names = ['get', 'post']
 
     def get(self, request):
         robots = self.model.objects.all()
@@ -75,15 +75,6 @@ class RobotsList(RobotsJsonResponse, View):
             decoded_body['created'] = datetime.strptime(decoded_body['created'], '%Y-%m-%d %H:%M:%S')
             created_robot = self.model(**decoded_body)
             return self.render_as_json(self.validate(created_robot))
-        else:
-            return self.render_as_json({'status': 'failure',
-                                        'code': 403, 'message': 'access denied'})
-
-    def delete(self, request):
-        if self.check_api(request):
-            self.model.objects.all().delete()
-            return self.render_as_json({'status': 'success',
-                                        'code': 204, 'message': 'the robots has been successfully deleted'})
         else:
             return self.render_as_json({'status': 'failure',
                                         'code': 403, 'message': 'access denied'})
@@ -132,12 +123,11 @@ class RobotsSummary(View):
 
     def get(self, request):
         year_now, week_now = datetime.today().isocalendar()[:2]  # год и номер недели
-        week = int(request.GET.get('week')) if bool(request.GET.get('week')) else 0  # по умолчанию сегодняшняя неделя
+        week = int(request.GET.get('week')) if bool(request.GET.get('week')) else -1  # по умолчанию прошлая неделя
         year = int(request.GET.get('year')) if bool(request.GET.get('week')) else year_now
         robots = self.model.objects.all()
         robots_at_given_week = robots.filter(created__week=week_now + week,
-                                             created__year=year)  # if week == -1 -> прошлая неделя
-        # week +1 -- роботы следующей недели, так можно считать планы
+                                             created__year=year)
 
         if not robots_at_given_week.exists():
             return HttpResponse(status=404)
